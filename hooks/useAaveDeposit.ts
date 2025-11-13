@@ -129,6 +129,22 @@ export function useAaveDeposit(depositAmount: string) {
       setMultiStepResult(result);
       console.log(result, "simulate txn");
 
+      if (!result.bridgeSimulation && result.executeSimulation) {
+        toast.info("No bridging needed - funds already on Base");
+        const gasFeeUsed = result.executeSimulation?.gasUsed || BigInt(0);
+        const gasFee = parseFloat(formatUnits(gasFeeUsed, TOKEN_DECIMALS));
+
+        setSimulation({
+          bridgeFee: "0",
+          executionGas: formatUnits(gasFeeUsed, TOKEN_DECIMALS),
+          totalCost: gasFee.toFixed(6),
+          destinationAmount: depositAmount,
+        });
+
+        setCurrentStep("");
+        return true;
+      }
+
       if (result.bridgeSimulation && result.executeSimulation) {
         const bridgeFeeStr =
           result.bridgeSimulation?.intent?.fees?.total || "0";
@@ -146,6 +162,7 @@ export function useAaveDeposit(depositAmount: string) {
           ),
           totalCost,
           destinationAmount:
+            //TODO: this needs to be fixed
             result.bridgeSimulation?.intent?.destination?.amount ||
             depositAmount,
         });
@@ -209,6 +226,7 @@ export function useAaveDeposit(depositAmount: string) {
       }, 100);
 
       const result = await nexusSDK.bridgeAndExecute(params);
+      console.log(result, "the end");
 
       clearInterval(intentCheckInterval);
       clearInterval(allowanceCheckInterval);

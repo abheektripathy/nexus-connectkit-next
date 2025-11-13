@@ -7,6 +7,7 @@ import { ConnectKitButton } from "connectkit";
 import Image from "next/image";
 import { useAaveDeposit } from "@/hooks/useAaveDeposit";
 import { toast } from "sonner";
+import BridgeModal from "@/components/BridgeModal";
 
 interface ChainBreakdown {
   balance: string;
@@ -27,7 +28,7 @@ interface UserAsset {
   decimals: number;
   name?: string;
   chainId?: number;
-  icon: string;
+  icon?: string;
   breakdown?: ChainBreakdown[];
 }
 
@@ -37,6 +38,7 @@ export default function BalanceDashboard() {
   const [isMounted, setIsMounted] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showBridgeModal, setShowBridgeModal] = useState(false);
   const { nexusSDK } = useNexus();
   const { isConnected, address } = useAccount();
   const { disconnect } = useDisconnect();
@@ -260,11 +262,13 @@ export default function BalanceDashboard() {
                         className="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center justify-center text-center min-h-[120px]"
                       >
                         <div className="flex flex-row items-center justify-center space-x-2">
-                          <img
-                            src={asset.icon}
-                            className="w-5 rounded-lg h-5"
-                            alt={asset.symbol}
-                          />
+                          {asset.icon && (
+                            <img
+                              src={asset.icon}
+                              className="w-5 rounded-lg h-5"
+                              alt={asset.symbol}
+                            />
+                          )}
                           <h3 className="font-semibold text-lg text-black dark:text-zinc-50">
                             {asset.symbol}
                           </h3>
@@ -331,9 +335,15 @@ export default function BalanceDashboard() {
                 disabled={isLoading}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-8 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Refreshing..." : "Refresh"}
+                {isLoading ? "Refetching..." : "Refetch"}
               </button>
-
+              <button
+                onClick={() => setShowBridgeModal(true)}
+                disabled={isLoading}
+                className="flex h-12 w-40 items-center justify-center gap-2 rounded-full bg-foreground px-8 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Bridge
+              </button>
               <button
                 onClick={handleAaveDeposit}
                 disabled={
@@ -474,11 +484,20 @@ export default function BalanceDashboard() {
                 </div>
 
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                  You will receive approximately{" "}
-                  {simulation.destinationAmount
-                    ? `${parseFloat(simulation.destinationAmount).toFixed(6)} USDC`
-                    : `~${parseFloat(depositAmount).toFixed(2)} USDC`}{" "}
-                  on Base chain which will be deposited to AAVE.
+                  {routeInfo && routeInfo.sources.length > 0 ? (
+                    <>
+                      You will receive approximately{" "}
+                      {simulation.destinationAmount
+                        ? `${parseFloat(simulation.destinationAmount).toFixed(6)} USDC`
+                        : `~${parseFloat(depositAmount).toFixed(2)} USDC`}{" "}
+                      on Base chain which will be deposited to AAVE.
+                    </>
+                  ) : (
+                    <>
+                      {parseFloat(depositAmount).toFixed(6)} USDC will be
+                      deposited directly to AAVE on Base (no bridging required).
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -498,31 +517,35 @@ export default function BalanceDashboard() {
                           {routeInfo.sources.length > 1 ? "s" : ""}:
                         </div>
                         <div className="space-y-2">
-                          {routeInfo.sources.map((source: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 p-2 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700"
-                            >
-                              <img
-                                src={source.chainLogo}
-                                alt={source.chainName}
-                                className="w-6 h-6 rounded-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src =
-                                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23ccc'/%3E%3C/svg%3E";
-                                }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium text-black dark:text-white truncate">
-                                  {source.chainName}
-                                </div>
-                                <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                                  {parseFloat(source.amount).toFixed(6)}{" "}
-                                  {routeInfo.token?.symbol || "USDC"}
+                          {routeInfo.sources.map(
+                            (source: Record<string, unknown>, idx: number) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-2 p-2 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700"
+                              >
+                                <img
+                                  src={source.chainLogo as string}
+                                  alt={source.chainName as string}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23ccc'/%3E%3C/svg%3E";
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-black dark:text-white truncate">
+                                    {source.chainName as string}
+                                  </div>
+                                  <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                                    {parseFloat(
+                                      source.amount as string,
+                                    ).toFixed(6)}{" "}
+                                    {routeInfo.token?.symbol || "USDC"}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ),
+                          )}
                         </div>
                       </div>
 
@@ -535,15 +558,18 @@ export default function BalanceDashboard() {
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {routeInfo.allSources.map(
-                                (source: any, idx: number) => (
+                                (
+                                  source: Record<string, unknown>,
+                                  idx: number,
+                                ) => (
                                   <div
                                     key={idx}
                                     className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700"
-                                    title={`${source.chainName}: ${source.amount} ${routeInfo.token?.symbol}`}
+                                    title={`${source.chainName as string}: ${source.amount as string} ${routeInfo.token?.symbol}`}
                                   >
                                     <img
-                                      src={source.chainLogo}
-                                      alt={source.chainName}
+                                      src={source.chainLogo as string}
+                                      alt={source.chainName as string}
                                       className="w-4 h-4 rounded-full object-cover"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src =
@@ -551,7 +577,9 @@ export default function BalanceDashboard() {
                                       }}
                                     />
                                     <span className="text-xs text-zinc-600 dark:text-zinc-400">
-                                      {parseFloat(source.amount).toFixed(2)}
+                                      {parseFloat(
+                                        source.amount as string,
+                                      ).toFixed(2)}
                                     </span>
                                   </div>
                                 ),
@@ -606,9 +634,27 @@ export default function BalanceDashboard() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-4">
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Route information will appear here
+                    <div className="text-center py-8">
+                      <div className="flex justify-center mb-3">
+                        <svg
+                          className="w-10 h-10 text-green-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-sm font-medium text-black dark:text-white mb-1">
+                        No Bridging Required
+                      </div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                        Funds already on Base chain
                       </div>
                     </div>
                   )}
@@ -635,6 +681,14 @@ export default function BalanceDashboard() {
           </div>
         </div>
       )}
+
+      {/* Bridge Modal */}
+      <BridgeModal
+        isOpen={showBridgeModal}
+        onClose={() => setShowBridgeModal(false)}
+        onSuccess={fetchUnifiedBalance}
+        availableTokens={unifiedBalance}
+      />
     </div>
   );
 }
