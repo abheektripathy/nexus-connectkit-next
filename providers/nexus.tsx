@@ -28,7 +28,7 @@ const NexusProvider = ({ children }: { children: React.ReactNode }) => {
   const sdk = useMemo(
     () =>
       new NexusSDK({
-        network: "mainnet",
+        network: "devnet",
         debug: true,
       }),
     [],
