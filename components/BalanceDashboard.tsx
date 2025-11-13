@@ -8,6 +8,19 @@ import Image from "next/image";
 import { useAaveDeposit } from "@/hooks/useAaveDeposit";
 import { toast } from "sonner";
 
+interface ChainBreakdown {
+  balance: string;
+  balanceInFiat: number;
+  chain: {
+    id: number;
+    logo: string;
+    name: string;
+  };
+  contractAddress: string;
+  decimals: number;
+  universe: number;
+}
+
 interface UserAsset {
   symbol: string;
   balance: string;
@@ -15,6 +28,7 @@ interface UserAsset {
   name?: string;
   chainId?: number;
   icon: string;
+  breakdown?: ChainBreakdown[];
 }
 
 export default function BalanceDashboard() {
@@ -233,36 +247,67 @@ export default function BalanceDashboard() {
                 <SkeletonGrid />
               ) : unifiedBalance.length > 0 ? (
                 <div className="grid grid-cols-3 gap-4">
-                  {unifiedBalance.map((asset, index) => (
-                    <div
-                      key={`${asset.symbol}-${asset.chainId || index}-${index}`}
-                      className="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center justify-center text-center min-h-[120px]"
-                    >
-                      <div className="flex flex-row items-center justify-center space-x-2">
-                        <img
-                          src={asset.icon}
-                          className="w-5 rounded-lg h-5"
-                        ></img>
-                        <h3 className="font-semibold text-lg text-black dark:text-zinc-50">
-                          {asset.symbol}
-                        </h3>
-                      </div>
+                  {unifiedBalance.map((asset, index) => {
+                    // Filter breakdown to only show chains with non-zero balance
+                    const nonZeroChains =
+                      asset.breakdown?.filter(
+                        (b) => parseFloat(b.balance) > 0,
+                      ) || [];
 
-                      <p className="font-mono text-sm text-black dark:text-zinc-50 mb-2">
-                        {formatBalance(asset.balance, asset.decimals)}
-                      </p>
-                      {asset.name && (
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-full">
-                          {asset.name}
+                    return (
+                      <div
+                        key={`${asset.symbol}-${asset.chainId || index}-${index}`}
+                        className="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-col items-center justify-center text-center min-h-[120px]"
+                      >
+                        <div className="flex flex-row items-center justify-center space-x-2">
+                          <img
+                            src={asset.icon}
+                            className="w-5 rounded-lg h-5"
+                            alt={asset.symbol}
+                          />
+                          <h3 className="font-semibold text-lg text-black dark:text-zinc-50">
+                            {asset.symbol}
+                          </h3>
+                        </div>
+
+                        <p className="font-mono text-sm text-black dark:text-zinc-50 mb-2">
+                          {formatBalance(asset.balance, asset.decimals)}
                         </p>
-                      )}
-                      {asset.chainId && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                          Chain: {asset.chainId}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+
+                        {/* Show chain sources with logos */}
+                        {nonZeroChains.length > 0 && (
+                          <div className="flex flex-wrap gap-1 justify-center mt-2">
+                            {nonZeroChains.map((breakdown, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700"
+                                title={`${breakdown.chain.name}: ${parseFloat(breakdown.balance).toFixed(4)}`}
+                              >
+                                <img
+                                  src={breakdown.chain.logo}
+                                  alt={breakdown.chain.name}
+                                  className="w-3 h-3 rounded-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' fill='%23ccc'/%3E%3C/svg%3E";
+                                  }}
+                                />
+                                <span className="text-[10px] text-zinc-600 dark:text-zinc-400">
+                                  {parseFloat(breakdown.balance).toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {asset.name && (
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-full mt-1">
+                            {asset.name}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-zinc-600 dark:text-zinc-400">
