@@ -3,8 +3,11 @@
 import { useState, useCallback } from "react";
 import { useNexus } from "@/providers/nexus";
 import { toast } from "sonner";
-import { parseUnits } from "viem";
-import { TOKEN_METADATA } from "@avail-project/nexus-core";
+import {
+  BridgeResult,
+  SimulationResult,
+  TOKEN_METADATA,
+} from "@avail-project/nexus-core";
 
 interface BridgeParams {
   token: string;
@@ -17,9 +20,7 @@ export function useBridge() {
   const [isBridging, setIsBridging] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [currentStep, setCurrentStep] = useState("");
-  const [simulation, setSimulation] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
   const simulateBridge = useCallback(
     async ({ token, amount, toChainId }: BridgeParams) => {
@@ -43,15 +44,13 @@ export function useBridge() {
           throw new Error(`Token ${token} not supported`);
         }
 
-        const amountWei = parseUnits(amount, tokenMetadata.decimals);
-
         const result = await nexusSDK.simulateBridge({
           token: token as keyof typeof TOKEN_METADATA,
           amount: amount,
           toChainId,
         });
 
-        setSimulation(result as unknown as Record<string, unknown>);
+        setSimulation(result);
         setCurrentStep("");
         return result;
       } catch (error) {
@@ -84,10 +83,7 @@ export function useBridge() {
           throw new Error(`Token ${token} not supported`);
         }
 
-        const amountWei = parseUnits(amount, tokenMetadata.decimals);
-
         setCurrentStep("Initiating bridge...");
-
         const intentCheckInterval = setInterval(() => {
           if (intentRefCallback.current) {
             setCurrentStep("Approving intent...");
@@ -106,7 +102,7 @@ export function useBridge() {
           }
         }, 100);
 
-        const result = await nexusSDK.bridge({
+        const result: BridgeResult = await nexusSDK.bridge({
           token: token as keyof typeof TOKEN_METADATA,
           amount: amount,
           toChainId,
@@ -116,11 +112,7 @@ export function useBridge() {
         clearInterval(allowanceCheckInterval);
         setCurrentStep("");
 
-        const resultData = result as Record<string, unknown>;
-        const explorerUrl = resultData.explorerUrl as string;
-
-        console.log(result, "end");
-
+        const explorerUrl = result.explorerUrl;
         if (explorerUrl) {
           toast.success(`Successfully bridged ${amount} ${token}!`, {
             duration: 5000,

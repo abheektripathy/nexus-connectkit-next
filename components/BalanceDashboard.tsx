@@ -50,7 +50,7 @@ export default function BalanceDashboard() {
       return sum + parseFloat(asset.balance);
     }, 0);
 
-  const reservedAmount = 0.5;
+  const reservedAmount = 0; //not required, extra safety measure to ensure non-fail deposits
   const availableUSDC = Math.max(0, totalUSDC - reservedAmount);
   const [depositAmount, setDepositAmount] = useState("1");
 

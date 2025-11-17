@@ -69,7 +69,7 @@ function parseError(error: unknown) {
 }
 
 const TOKEN = "USDC" as const;
-const AAVE_POOL_ADDRESS = "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951";
+const AAVE_POOL_ADDRESS = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
 const BASE_CHAIN_ID = 8453;
 
 const TOKEN_DECIMALS = TOKEN_METADATA[TOKEN].decimals;

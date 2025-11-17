@@ -36,8 +36,6 @@ export default function ExecuteModal({
   depositAmount,
   handleConfirmDeposit,
   isDepositing,
-  totalUSDC = 0,
-  availableUSDC = 0,
 }: ExecuteModalProps) {
   if (!isOpen || !simulation) {
     return null;
@@ -60,11 +58,6 @@ export default function ExecuteModal({
               <div className="text-lg font-semibold text-black dark:text-white">
                 {depositAmount} USDC
               </div>
-              {totalUSDC > availableUSDC && (
-                <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
-                  (0.5 USDC reserved for gas)
-                </div>
-              )}
             </div>
 
             <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg space-y-2">
@@ -99,11 +92,10 @@ export default function ExecuteModal({
             <div className="text-xs text-zinc-500 dark:text-zinc-400">
               {routeInfo && routeInfo.sources.length > 0 ? (
                 <>
-                  You will receive approximately{" "}
-                  {simulation.destinationAmount
-                    ? `${parseFloat(simulation.destinationAmount).toFixed(6)} USDC`
-                    : `~${parseFloat(depositAmount).toFixed(2)} USDC`}{" "}
-                  on Base chain which will be deposited to AAVE.
+                  The amount of{" "}
+                  {parseFloat(simulation.destinationAmount).toFixed(6)} USDC
+                  will be bridged to BASE to fullfill your deposit request of{" "}
+                  {depositAmount} USDC to AAVE.
                 </>
               ) : (
                 <>

@@ -115,21 +115,19 @@ export default function BridgeModal({
 
   const getRouteInfo = () => {
     if (!simulation) return null;
-    const simData = simulation as Record<string, unknown>;
-    const intent = simData.intent as Record<string, unknown> | undefined;
+    const simData = simulation;
+    const intent = simData.intent;
     if (!intent) return null;
 
     return {
-      sources: (intent.sources as Array<Record<string, unknown>>) || [],
-      destination: intent.destination as Record<string, unknown> | undefined,
-      fees: intent.fees as Record<string, unknown> | undefined,
+      sources: intent.sources,
+      destination: intent.destination,
+      fees: intent.fees,
     };
   };
 
   const routeInfo = getRouteInfo();
-  const bridgeFee = routeInfo?.fees
-    ? ((routeInfo.fees as Record<string, unknown>).total as string) || "0"
-    : "0";
+  const bridgeFee = routeInfo?.fees ? routeInfo.fees.total || "0" : "0";
   const destinationChain = availableChains.find((c) => c.id === selectedChain);
 
   if (!isOpen) return null;
